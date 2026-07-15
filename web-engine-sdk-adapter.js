@@ -139,12 +139,29 @@
     };
   }
 
+  function patchEponesh() {
+    if (window.__eponeshFetchPatched || typeof window.fetch !== "function") return;
+    window.__eponeshFetchPatched = true;
+    var nativeFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : input && input.url;
+      if (/https?:\/\/[^/]*eponesh\.com\//i.test(String(url || ""))) {
+        return Promise.resolve(new Response(JSON.stringify({ success: true, data: {}, player: null }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        }));
+      }
+      return nativeFetch(input, init);
+    };
+  }
+
   function ensure() {
     patchGameBridge();
     patchGameApi();
     patchAdBreak();
     patchAzerion();
     patchCpmstar();
+    patchEponesh();
   }
 
   ensure();
