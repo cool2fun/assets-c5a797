@@ -329,6 +329,43 @@
         return true;
       });
     };
+
+    if (!Node.prototype.__constructAdLoaderPatched) {
+      var nativeAppendChild = Node.prototype.appendChild;
+      var nativeInsertBefore = Node.prototype.insertBefore;
+      function isRemoteAdScript(node) {
+        return node && node.nodeType === 1 && node.tagName === "SCRIPT" &&
+          /html5\.api\.gamedistribution\.com|(?:api\.)?gamemonetize\.com/i.test(node.src || "");
+      }
+      function completeRemoteAdScript(node) {
+        setTimeout(function () {
+          var event;
+          try { event = new Event("load"); }
+          catch (_) {
+            event = document.createEvent("Event");
+            event.initEvent("load", false, false);
+          }
+          node.dispatchEvent(event);
+          fireGd("SDK_READY");
+          fireGd("SDK_GAME_START");
+        }, 0);
+      }
+      Node.prototype.appendChild = function (node) {
+        if (isRemoteAdScript(node)) {
+          completeRemoteAdScript(node);
+          return node;
+        }
+        return nativeAppendChild.call(this, node);
+      };
+      Node.prototype.insertBefore = function (node, reference) {
+        if (isRemoteAdScript(node)) {
+          completeRemoteAdScript(node);
+          return node;
+        }
+        return nativeInsertBefore.call(this, node, reference);
+      };
+      Node.prototype.__constructAdLoaderPatched = true;
+    }
     setTimeout(function () { fireGd("SDK_READY"); }, 0);
   }
 
